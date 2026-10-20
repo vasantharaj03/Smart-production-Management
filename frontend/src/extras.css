@@ -1,0 +1,46 @@
+.btn.sm{padding:6px 12px;font-size:12.5px;margin:0}
+.card-head{align-items:center;gap:10px;flex-wrap:wrap}
+.content>.grid:nth-of-type(5){--g:5}.content>.grid:nth-of-type(6){--g:6}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:1100px){.g3{grid-template-columns:1fr}}
+
+.clock{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15;padding-right:6px;font-variant-numeric:tabular-nums}
+.clock b{font:700 17px "Roboto Condensed"}.clock small{color:var(--muted)}
+
+.bell{position:relative}.bell .icon-btn{position:relative}.bell .icon-btn:hover{transform:rotate(-12deg)}
+.badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--red);color:#fff;font:700 11px/18px Roboto;font-style:normal;text-align:center;animation:ring 1.8s infinite}
+.drop{position:absolute;right:0;top:46px;width:310px;z-index:50;background:var(--card-solid);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-hover);padding:10px;animation:slidein .25s cubic-bezier(.2,.8,.2,1)}
+.drop-head{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 8px;border-bottom:1px solid var(--line)}
+.drop-head button{background:none;border:0;color:var(--blue);font-size:12px}
+.note{display:flex;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);font-size:13px}.note:last-child{border:0}
+.lvl{width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0;background:var(--blue)}.lvl.high{background:var(--red)}.lvl.medium{background:var(--orange)}
+.empty{text-align:center;color:var(--muted);padding:18px 0;margin:0;font-size:13px}
+
+.tools{display:flex;gap:8px;align-items:center}
+.search{border:1px solid var(--line);background:var(--card-solid);color:var(--ink);border-radius:9px;padding:6px 10px;font:inherit;font-size:13px;width:150px}
+.search:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(18,128,106,.2)}
+.spark{display:block;margin-top:4px}
+
+.progress{margin-top:12px}.progress-top{display:flex;justify-content:space-between;margin-bottom:5px}
+.bar{height:10px;border-radius:6px;background:var(--track);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#2f80d8,#14a3a3);transition:width .9s cubic-bezier(.2,.8,.2,1)}.bar i.done{background:linear-gradient(90deg,#2f9e44,#43b862)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.chips button{border:1px solid var(--line);background:var(--head);color:var(--ink);border-radius:999px;padding:4px 12px;font-size:12.5px;transition:all .2s}
+.chips button:hover{transform:translateY(-2px);box-shadow:var(--shadow)}.chips button.on{background:var(--navy2);color:#fff;border-color:transparent}
+.chips .running.on{background:var(--green)}.chips .down.on{background:var(--red)}.chips .idle.on{background:#8b95a8}.chips .maint.on{background:var(--orange)}
+.stopwatch{margin:0 8px 0 0;border:1px dashed var(--blue);background:rgba(18,128,106,.1);color:var(--ink);border-radius:9px;padding:9px 14px;font-weight:500;transition:all .2s}
+.stopwatch:hover{background:rgba(18,128,106,.2)}.stopwatch.run{border-style:solid;border-color:var(--red);background:rgba(229,72,77,.12);animation:softpulse 1.6s infinite}
+.stopwatch b{font-variant-numeric:tabular-nums;margin-left:6px}
+
+.floor{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:7px}
+.mtile{border:0;border-radius:10px;padding:8px 4px;color:#fff;display:flex;flex-direction:column;align-items:center;gap:1px;transition:transform .18s,box-shadow .2s;animation:rise .5s both}
+.mtile:hover{transform:translateY(-3px) scale(1.06);box-shadow:var(--shadow-hover)}.mtile small{color:rgba(255,255,255,.88)}.mtile b{font-size:12px}
+.mtile.running{background:linear-gradient(135deg,#43b862,#2f9e44)}.mtile.idle{background:linear-gradient(135deg,#a3acbd,#7d889c)}
+.mtile.maint{background:linear-gradient(135deg,#f5a94a,#e08a1c)}.mtile.down{background:linear-gradient(135deg,#ef6a6e,#d63a3f);animation:ring 1.8s infinite}
+.mtile.sel{outline:3px solid var(--blue);outline-offset:2px}
+.floor-detail{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--head);font-size:13px}
+
+.sim-result{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.slider{display:block;margin:10px 0;font-size:13px}.slider span{display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)}.slider b{color:var(--ink)}
+.slider input{width:100%;accent-color:var(--blue)}
+.sim-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
