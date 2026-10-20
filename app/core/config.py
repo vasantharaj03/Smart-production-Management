@@ -23,5 +23,7 @@ class Settings:
     db_connect_timeout: int = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
     auto_create_database: bool = as_bool(os.getenv("AUTO_CREATE_DATABASE"), True)
     auto_create_tables: bool = as_bool(os.getenv("AUTO_CREATE_TABLES"), True)
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "")
+    jwt_access_token_minutes: int = int(os.getenv("JWT_ACCESS_TOKEN_MINUTES", "60"))
 
 settings = Settings()

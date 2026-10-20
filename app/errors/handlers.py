@@ -10,4 +10,15 @@ async def app_error_handler(request: Request, exc: AppError):
     return JSONResponse(status_code=exc.status_code, content={"success": False, "message": exc.message, "data": None})
 
 async def validation_error_handler(request: Request, exc: RequestValidationError):
-    return JSONResponse(status_code=422, content={"success": False, "message": "Request validation failed", "data": exc.errors()})
+    errors = [
+        {key: value for key, value in error.items() if key != "input"}
+        for error in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "message": "Request validation failed",
+            "data": errors,
+        },
+    )

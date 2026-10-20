@@ -33,6 +33,11 @@ Copy-Item .env.example .env
 ```
 
 Edit `.env` and set your local MySQL username/password. Never commit `.env`.
+Set `JWT_SECRET_KEY` to a unique secret of at least 32 bytes. Generate one with:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
 
 ### MySQL port 3306 / 3307
 
@@ -49,6 +54,7 @@ uvicorn app.main:app --reload
 - Swagger: http://127.0.0.1:8000/docs
 - Health: http://127.0.0.1:8000/api/v1/health
 - DB health: http://127.0.0.1:8000/api/v1/health/db
+- Authentication: http://127.0.0.1:8000/docs
 
 On startup, `AUTO_CREATE_DATABASE=true` creates the database if missing, and `AUTO_CREATE_TABLES=true` applies `schema.sql`. Existing tables are not dropped. `CREATE TABLE IF NOT EXISTS` does not alter existing table definitions.
 
@@ -57,6 +63,32 @@ Test connection independently:
 ```powershell
 python scripts/test_db.py
 ```
+
+## Authentication and authorization
+
+- `POST /api/v1/auth/register` creates an account and returns a bearer token.
+- `POST /api/v1/auth/login` verifies credentials and returns a bearer token.
+- `GET /api/v1/auth/me` returns the profile for the bearer token.
+
+Registration always creates a `SUPERVISOR`; role selection is deliberately not
+exposed to public clients. Assign `ADMIN` or `MANAGER` only through a trusted
+administrative process. Passwords are hashed with bcrypt. Tokens expire after
+`JWT_ACCESS_TOKEN_MINUTES` (60 minutes by default).
+
+All machine reads require a valid bearer token. Creating, updating, and deleting
+machines requires the `ADMIN` or `MANAGER` role. Include the login/register
+`access_token` in an `Authorization: Bearer <token>` header.
+
+Run the frontend separately during development:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite development server forwards `/api` requests to `http://127.0.0.1:8000`.
+Set `VITE_API_BASE_URL` if the API is hosted at a different URL.
 
 ## Example machine endpoints
 
@@ -92,4 +124,4 @@ Create request:
 - Each teammate creates their own `.env`; share `.env.example`, not credentials.
 - Commit schema changes alongside the code that depends on them.
 - Use a deliberate migration/change script for changes to existing columns.
-- This starter includes health checks and machine CRUD. Add authentication/roles, production records, shifts, targets, downtime, defect tracking, KPI calculations and reports as separate modules.
+- This starter includes health checks, authentication/roles, and machine CRUD. Add production records, shifts, targets, downtime, defect tracking, KPI calculations and reports as separate modules.
