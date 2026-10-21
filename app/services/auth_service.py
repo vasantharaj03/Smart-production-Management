@@ -12,6 +12,7 @@ class AuthService:
             full_name=payload.full_name,
             email=str(payload.email).lower(),
             password_hash=hash_password(payload.password),
+            role=payload.role,
         )
         return self._create_auth_response(user)
 
