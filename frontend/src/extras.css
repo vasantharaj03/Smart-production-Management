@@ -44,3 +44,5 @@
 .slider{display:block;margin:10px 0;font-size:13px}.slider span{display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)}.slider b{color:var(--ink)}
 .slider input{width:100%;accent-color:var(--blue)}
 .sim-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
+
+.warn{color:var(--orange);font-weight:700}

@@ -4,14 +4,14 @@ import { Shell, Card, Donut, CountUp, Loading } from "../components/Layout.jsx";
 import { getManagerData, downloadReport } from "../api.js";
 import { MachineFloor, demoMachines, OeeSimulator } from "../components/Extras.jsx";
 
-const dot = { high: "#d63031", medium: "#f0952a", low: "#f2c94c" };
+const dot = { high: "#d63031", medium: "#e9b949", low: "#f2c94c" };
 
 export default function ManagerDashboard({ user, onLogout }) {
   const [range, setRange] = useState("daily");
   const [d, setD] = useState(null);
   const [ack, setAck] = useState([]);
   const load = () => getManagerData(range).then(setD);
-  useEffect(() => { load(); }, [range]);
+  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [range]); // auto-refresh every 15s
   if (!d) return <Loading />;
 
   const short = d.output.plan - d.output.actual;
@@ -26,7 +26,7 @@ export default function ManagerDashboard({ user, onLogout }) {
       extra={<div className="seg">{["daily", "weekly", "monthly"].map((r) => <button key={r} className={r === range ? "on" : ""} onClick={() => setRange(r)}>{r[0].toUpperCase() + r.slice(1)}</button>)}</div>}>
       <div className="grid g4">
         <Card title="Production Line OEE">
-          <div className="kpi"><Donut percent={d.oee.value} color="#2f9e44" track="#d63031" size={84} />
+          <div className="kpi"><Donut percent={d.oee.value} color="#1fa971" track="#d63031" size={84} />
             <div><div className="big"><CountUp value={d.oee.value} decimals={1} suffix="%" /> <span>OEE</span></div><small className="good">Trending up (+{d.oee.delta}%)</small></div></div>
           <small>Availability: {d.oee.availability}% | Performance: {d.oee.performance}% | Quality: {d.oee.quality}%</small>
         </Card>
@@ -39,11 +39,11 @@ export default function ManagerDashboard({ user, onLogout }) {
           <small className="block">Top Product: {d.output.topProduct}</small>
         </Card>
         <Card title="Factory Utilization">
-          <div className="kpi"><Donut percent={d.utilization.percent} color="#3b82f6" size={84} /><div className="big"><CountUp value={d.utilization.percent} suffix="%" /> <span>Utilization</span></div></div>
+          <div className="kpi"><Donut percent={d.utilization.percent} color="#1a8f73" size={84} /><div className="big"><CountUp value={d.utilization.percent} suffix="%" /> <span>Utilization</span></div></div>
           <small>Active Lines: {d.utilization.activeLines}/{d.utilization.totalLines} | Active Machines: {d.utilization.activeMachines}/{d.utilization.totalMachines}</small>
         </Card>
         <Card title="Operational Costs">
-          <div className="kpi"><Donut percent={d.cost.energy} color="#14a3a3" size={84} /><div className="big"><CountUp value={d.cost.total} prefix="$" /></div></div>
+          <div className="kpi"><Donut percent={d.cost.energy} color="#3ddc97" size={84} /><div className="big"><CountUp value={d.cost.total} prefix="$" /></div></div>
           <small>Energy: {d.cost.energy}% | Labor: {d.cost.labor}% | Scrap: {d.cost.scrap}%</small>
         </Card>
       </div>
@@ -52,16 +52,16 @@ export default function ManagerDashboard({ user, onLogout }) {
         <Card title="High-Level OEE Trend - 30 Days">
           <div className="chart"><ResponsiveContainer>
             <BarChart data={d.oeeTrend}><CartesianGrid vertical={false} stroke="#e5e9f0" /><XAxis dataKey="date" interval={2} /><YAxis domain={[0, 100]} unit="%" /><Tooltip /><Legend verticalAlign="top" />
-              <Bar dataKey="availability" name="Availability" stackId="a" fill="#2f80d8" />
-              <Bar dataKey="performance" name="Performance" stackId="a" fill="#f0952a" />
-              <Bar dataKey="quality" name="Quality" stackId="a" fill="#14a3a3" />
+              <Bar dataKey="availability" name="Availability" stackId="a" fill="#0f6b57" />
+              <Bar dataKey="performance" name="Performance" stackId="a" fill="#e9b949" />
+              <Bar dataKey="quality" name="Quality" stackId="a" fill="#3ddc97" />
             </BarChart></ResponsiveContainer></div>
         </Card>
         <Card title="Scrap & Defect Analysis">
           <div className="chart"><ResponsiveContainer>
             <ComposedChart data={pareto}><CartesianGrid vertical={false} stroke="#e5e9f0" /><XAxis dataKey="cause" /><YAxis yAxisId="l" /><YAxis yAxisId="r" orientation="right" domain={[0, 100]} unit="%" /><Tooltip /><Legend verticalAlign="top" />
-              <Bar yAxisId="l" dataKey="count" name="Defect counts" fill="#2f80d8" radius={[6, 6, 0, 0]} />
-              <Line yAxisId="r" dataKey="cumulative" name="Cumulative (%)" stroke="#64748b" strokeWidth={2} />
+              <Bar yAxisId="l" dataKey="count" name="Defect counts" fill="#0f6b57" radius={[6, 6, 0, 0]} />
+              <Line yAxisId="r" dataKey="cumulative" name="Cumulative (%)" stroke="#6b8a83" strokeWidth={2} />
             </ComposedChart></ResponsiveContainer></div>
           <small>Top Cause: {pareto[0].cause} ({pareto[0].count} counts)</small>
         </Card>

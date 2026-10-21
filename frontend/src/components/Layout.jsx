@@ -57,9 +57,11 @@ export function Shell({ user, roleLabel, nav, title, onLogout, onRefresh, extra,
   const [active, setActive] = useState(nav[0]);
   const [stamp, setStamp] = useState(new Date());
   const [spin, setSpin] = useState(false);
+  const [src, setSrc] = useState(window.__dataSource || "demo");
   const [theme, toggleTheme] = useTheme();
   const refresh = () => { setStamp(new Date()); setSpin(true); setTimeout(() => setSpin(false), 700); onRefresh?.(); };
   useEffect(() => { const t = setInterval(() => setStamp(new Date()), 60000); return () => clearInterval(t); }, []);
+  useEffect(() => { const h = (e) => setSrc(e.detail); window.addEventListener("datasource", h); return () => window.removeEventListener("datasource", h); }, []);
   return (
     <div className="app">
       <aside className="sidebar">
@@ -90,7 +92,7 @@ export function Shell({ user, roleLabel, nav, title, onLogout, onRefresh, extra,
           </div>
         </header>
         {children}
-        <footer className="status"><i className="live" /> System Status: <span className="ok">Online</span> | Last Updated: {stamp.toLocaleTimeString()}</footer>
+        <footer className="status"><i className="live" /> System Status: <span className="ok">Online</span> | Last Updated: {stamp.toLocaleTimeString()} | Data: <b className={src === "live" ? "ok" : "warn"}>{src === "live" ? "Live" : "Demo"}</b></footer>
       </main>
     </div>
   );
