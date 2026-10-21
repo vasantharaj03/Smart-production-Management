@@ -3,17 +3,37 @@
  * so the UI works before the API is ready. Replace the URLs with the real endpoints
  * and adjust the response shapes (they match the mock objects below).
  */
-const token = () => { try { return JSON.parse(localStorage.getItem("user"))?.token; } catch { return null; } };
+import { getToken } from "./api/auth.js";
+const token = getToken;
+  localStorage.getItem("smartprod_access_token") ||
+  sessionStorage.getItem("smartprod_access_token");
+
+export const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+const FORCE_DEMO = import.meta.env.VITE_USE_MOCK === "true";
+
+const setSource = (v) => { window.__dataSource = v; window.dispatchEvent(new CustomEvent("datasource", { detail: v })); };
 
 async function request(url, options = {}, fallback) {
+  if (FORCE_DEMO) { setSource("demo"); return fallback; }
   try {
-    const res = await fetch(url, {
+    const res = await fetch(API_BASE + url, {
       ...options,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}`, ...(options.headers || {}) },
+      headers: {
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        "ngrok-skip-browser-warning": "true",   // skips the ngrok interstitial page
+        Authorization: `Bearer ${token()}`,
+        ...(options.headers || {}),
+      },
     });
-    if (!res.ok) throw new Error(res.status);
-    return await res.json();
-  } catch {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    setSource("live");
+    // sections missing from the real response fall back to demo data so the page never crashes
+    return fallback && typeof fallback === "object" && !Array.isArray(fallback) && data && typeof data === "object"
+      ? { ...fallback, ...data } : data;
+  } catch (e) {
+    console.warn("API failed, showing demo data:", url, e.message);
+    setSource("demo");
     return fallback;
   }
 }
@@ -80,4 +100,4 @@ export const getSupervisorData = () => request("/api/supervisor/dashboard", {}, 
 export const getManagerData = (range = "daily") => request(`/api/manager/dashboard?range=${range}`, {}, managerMock);
 export const submitShiftEntry = (body) => request("/api/production/shift-entry", { method: "POST", body: JSON.stringify(body) }, { ok: true });
 export const logDowntime = (body) => request("/api/downtime", { method: "POST", body: JSON.stringify(body) }, { ok: true });
-export const downloadReport = (name, type) => window.open(`/api/reports/download?name=${encodeURIComponent(name)}&type=${type}`, "_blank");
+export const downloadReport = (name, type) => window.open(`${API_BASE}/api/reports/download?name=${encodeURIComponent(name)}&type=${type}`, "_blank");

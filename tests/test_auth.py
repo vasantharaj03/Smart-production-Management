@@ -4,11 +4,14 @@ from unittest.mock import Mock, patch
 
 import jwt
 from fastapi.security import HTTPAuthorizationCredentials
+from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_current_user
 from app.api.dependencies import require_roles
+from app.api.routes.auth import service as app_auth_service
 from app.core import security
 from app.errors.exceptions import Forbidden, InvalidRequest, Unauthorized
+from app.main import app
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth import RegisterRequest
 from app.services.auth_service import AuthService
@@ -56,29 +59,39 @@ class AuthServiceTests(unittest.TestCase):
             "is_active": True,
         }
 
-    def test_registration_creates_supervisor_and_returns_safe_user(self):
-        self.repository.create_user.return_value = self.user
-        payload = RegisterRequest(
-            full_name="Casey Worker",
-            email="Casey@Example.com",
-            password="secure-password",
-            role="ADMIN",
-        )
-
+    def test_registration_preserves_supported_roles_and_returns_safe_user(self):
         with patch(
             "app.services.auth_service.create_access_token",
             return_value="signed-token",
         ):
-            result = self.service.register(payload)
+            for role in ("SUPERVISOR", "ADMIN", "MANAGER"):
+                with self.subTest(role=role):
+                    self.repository.create_user.return_value = {
+                        **self.user,
+                        "role": role,
+                    }
+                    payload = RegisterRequest(
+                        full_name="Casey Worker",
+                        email="Casey@Example.com",
+                        password="secure-password",
+                        role=role,
+                    )
 
-        self.repository.create_user.assert_called_once()
-        args = self.repository.create_user.call_args.kwargs
-        self.assertEqual(args["email"], "casey@example.com")
-        self.assertNotIn("role", args)
-        self.assertTrue(security.verify_password("secure-password", args["password_hash"]))
-        self.assertEqual(result["user"]["role"], "SUPERVISOR")
-        self.assertNotIn("password_hash", result["user"])
-        self.assertEqual(result["access_token"], "signed-token")
+                    result = self.service.register(payload)
+
+                    args = self.repository.create_user.call_args.kwargs
+                    self.assertEqual(args["email"], "casey@example.com")
+                    self.assertEqual(args["role"], role)
+                    self.assertTrue(
+                        security.verify_password(
+                            "secure-password", args["password_hash"]
+                        )
+                    )
+                    self.assertEqual(result["user"]["role"], role)
+                    self.assertNotIn("password_hash", result["user"])
+                    self.assertEqual(result["access_token"], "signed-token")
+
+        self.assertEqual(self.repository.create_user.call_count, 3)
 
     def test_inactive_account_cannot_log_in(self):
         self.user["is_active"] = False
@@ -87,6 +100,53 @@ class AuthServiceTests(unittest.TestCase):
 
         with self.assertRaises(Unauthorized):
             self.service.login("casey@example.com", "secure-password")
+
+
+class RegisterApiTests(unittest.TestCase):
+    def test_register_endpoint_accepts_all_supported_roles(self):
+        client = TestClient(app)
+
+        def create_user(**kwargs):
+            return {
+                "user_id": 7,
+                "full_name": kwargs["full_name"],
+                "email": kwargs["email"],
+                "role": kwargs["role"],
+                "is_active": True,
+            }
+
+        with (
+            patch.object(
+                app_auth_service.repository,
+                "create_user",
+                side_effect=create_user,
+            ) as create_user_mock,
+            patch(
+                "app.services.auth_service.create_access_token",
+                return_value="signed-token",
+            ),
+        ):
+            for role in ("SUPERVISOR", "ADMIN", "MANAGER"):
+                with self.subTest(role=role):
+                    response = client.post(
+                        "/api/v1/auth/register",
+                        json={
+                            "full_name": "Casey Worker",
+                            "email": "casey@example.com",
+                            "password": "secure-password",
+                            "role": role,
+                        },
+                    )
+
+                    self.assertEqual(response.status_code, 201)
+                    self.assertTrue(response.json()["success"])
+                    self.assertEqual(response.json()["data"]["user"]["role"], role)
+
+        self.assertEqual(create_user_mock.call_count, 3)
+        self.assertEqual(
+            [call.kwargs["role"] for call in create_user_mock.call_args_list],
+            ["SUPERVISOR", "ADMIN", "MANAGER"],
+        )
 
 
 class RoleAuthorizationTests(unittest.TestCase):

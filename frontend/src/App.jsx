@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { getProfile, login, registerAccount } from "./api/auth";
+import RoleDashboard from "./RoleDashboard.jsx";
 import "./App.css";
 
 export default function App() {
@@ -90,6 +91,10 @@ export default function App() {
     setUser(null);
     setPassword("");
     setMode("login");
+  }
+
+  if (user && !isCheckingSession) {
+    return <RoleDashboard user={user} onLogout={handleLogout} />;
   }
 
   return (
@@ -205,26 +210,6 @@ export default function App() {
           <div className="auth-card auth-status" role="status">
             Checking your secure session…
           </div>
-        ) : user ? (
-          <section className="auth-card authenticated-card">
-            <div className="welcome-icon" aria-hidden="true">✓</div>
-            <div className="auth-eyebrow">SECURE WORKSPACE</div>
-            <h2>Welcome, {user.full_name.split(" ")[0]}<span>.</span></h2>
-            <p className="auth-description">
-              You are signed in as <strong>{user.email}</strong>.
-            </p>
-            <div className="user-role">
-              <span>ACCOUNT ROLE</span>
-              <strong>{user.role}</strong>
-            </div>
-            <p className="auth-note">
-              Your account permissions are enforced by the server.
-            </p>
-            <button type="button" className="login-button" onClick={handleLogout}>
-              <span>Sign out</span>
-              <span className="button-arrow">↗</span>
-            </button>
-          </section>
         ) : (
         <form className="auth-card" onSubmit={handleSubmit} noValidate>
           <div className="mobile-brand">

@@ -1,4 +1,23 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+const TOKEN_KEY = "smartprod_access_token";
+
+// ---- token helpers (shared by App.jsx and api.js) ----
+export const getToken = () =>
+  localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+
+export function saveToken(token, remember = true) {
+  clearToken();
+  (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+}
+
+// ---- make sure role is always lowercase, e.g. "Admin" -> "admin" ----
+const normalizeUser = (user) =>
+  user ? { ...user, role: String(user.role || "").toLowerCase() } : user;
 
 async function request(path, { token, ...options } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -17,20 +36,22 @@ async function request(path, { token, ...options } = {}) {
   return result.data;
 }
 
-export function registerAccount({ full_name, email, password }) {
-  return request("/auth/register", {
+export async function registerAccount({ full_name, email, password }) {
+  const data = await request("/auth/register", {
     method: "POST",
     body: JSON.stringify({ full_name, email, password }),
   });
+  return { ...data, user: normalizeUser(data.user) };
 }
 
-export function login({ email, password }) {
-  return request("/auth/login", {
+export async function login({ email, password }) {
+  const data = await request("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
+  return { ...data, user: normalizeUser(data.user) };
 }
 
-export function getProfile(token) {
-  return request("/auth/me", { token });
+export async function getProfile(token) {
+  return normalizeUser(await request("/auth/me", { token }));
 }
