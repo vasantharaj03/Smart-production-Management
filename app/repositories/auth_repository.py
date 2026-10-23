@@ -35,9 +35,11 @@ class AuthRepository:
         with get_cursor() as (_, cursor):
             cursor.execute(
                 """
-                SELECT user_id, full_name, email, password_hash, role, is_active
-                FROM users
-                WHERE email = %s
+                SELECT u.user_id, u.full_name, u.email, u.password_hash, u.role, u.is_active,
+                       u.shift_id, s.shift_name
+                FROM users u
+                LEFT JOIN shifts s ON s.shift_id = u.shift_id
+                WHERE u.email = %s
                 """,
                 (email,),
             )
@@ -47,9 +49,11 @@ class AuthRepository:
         with get_cursor() as (_, cursor):
             cursor.execute(
                 """
-                SELECT user_id, full_name, email, role, is_active
-                FROM users
-                WHERE user_id = %s
+                SELECT u.user_id, u.full_name, u.email, u.role, u.is_active,
+                       u.shift_id, s.shift_name
+                FROM users u
+                LEFT JOIN shifts s ON s.shift_id = u.shift_id
+                WHERE u.user_id = %s
                 """,
                 (user_id,),
             )

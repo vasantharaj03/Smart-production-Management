@@ -1,3 +1,4 @@
+import "./dashboard.css";
 import AdminDashboard from "./dashboards/AdminDashboard.jsx";
 import SupervisorDashboard from "./dashboards/SupervisorDashboard.jsx";
 import ManagerDashboard from "./dashboards/ManagerDashboard.jsx";

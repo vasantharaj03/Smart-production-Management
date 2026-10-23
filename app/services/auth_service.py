@@ -1,4 +1,4 @@
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import create_access_token, verify_password
 from app.errors.exceptions import Unauthorized
 from app.repositories.auth_repository import AuthRepository
 
@@ -6,15 +6,6 @@ from app.repositories.auth_repository import AuthRepository
 class AuthService:
     def __init__(self):
         self.repository = AuthRepository()
-
-    def register(self, payload):
-        user = self.repository.create_user(
-            full_name=payload.full_name,
-            email=str(payload.email).lower(),
-            password_hash=hash_password(payload.password),
-            role=payload.role,
-        )
-        return self._create_auth_response(user)
 
     def login(self, email: str, password: str):
         user = self.repository.get_by_email(email.lower())
@@ -33,6 +24,8 @@ class AuthService:
             "full_name": user["full_name"],
             "email": user["email"],
             "role": user["role"],
+            "shift_id": user.get("shift_id"),
+            "shift_name": user.get("shift_name"),
         }
         return {
             "access_token": create_access_token(user["user_id"]),

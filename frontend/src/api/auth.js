@@ -36,14 +36,6 @@ async function request(path, { token, ...options } = {}) {
   return result.data;
 }
 
-export async function registerAccount({ full_name, email, password }) {
-  const data = await request("/auth/register", {
-    method: "POST",
-    body: JSON.stringify({ full_name, email, password }),
-  });
-  return { ...data, user: normalizeUser(data.user) };
-}
-
 export async function login({ email, password }) {
   const data = await request("/auth/login", {
     method: "POST",

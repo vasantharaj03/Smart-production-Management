@@ -13,17 +13,6 @@ export function downloadCSV(filename, rows) {
   URL.revokeObjectURL(url);
 }
 
-/* Simulated live data. Replace with a websocket / polling call when the API is ready. */
-export function useLiveSeries(base, spread, n = 24, ms = 2000) {
-  const make = () => Math.max(0, base + (Math.random() - 0.5) * spread);
-  const [s, setS] = useState(() => Array.from({ length: n }, make));
-  useEffect(() => {
-    const t = setInterval(() => setS((a) => [...a.slice(1), make()]), ms);
-    return () => clearInterval(t);
-  }, []);
-  return s;
-}
-
 const hhmm = () => new Date().toTimeString().slice(0, 5);
 
 /* ---------- top bar: clock + shift ---------- */
@@ -41,31 +30,26 @@ export function LiveClock() {
 }
 
 /* ---------- notification bell ---------- */
-const DEMO_NOTES = [
-  { id: 1, level: "high", text: "Line 3 - Packing: extended downtime (65m)", time: "2 min ago" },
-  { id: 2, level: "medium", text: "Pack 02 defect rate reached 5.1%", time: "14 min ago" },
-  { id: 3, level: "info", text: "Nightly database backup completed", time: "1 hr ago" },
-];
-export function NotificationBell({ items = DEMO_NOTES }) {
+export function NotificationBell({ items = [] }) {
   const [open, setOpen] = useState(false);
-  const [list, setList] = useState(items);
-  const [seen, setSeen] = useState(false);
+  const [seenIds, setSeenIds] = useState(() => new Set());
+  const markSeen = () => setSeenIds((current) => new Set([...current, ...items.map((item) => item.id)]));
   const ref = useRef(null);
   useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
-  const unread = seen ? 0 : list.length;
+  const unread = items.filter((item) => !seenIds.has(item.id)).length;
   return (
     <div className="bell" ref={ref}>
-      <button className="icon-btn" aria-label="Notifications" onClick={() => { setOpen(!open); setSeen(true); }}>
+      <button className="icon-btn" aria-label="Notifications" onClick={() => { setOpen(!open); markSeen(); }}>
         🔔{unread > 0 && <i className="badge">{unread}</i>}
       </button>
       {open && (
         <div className="drop">
-          <div className="drop-head"><b>Notifications</b><button onClick={() => setList([])}>Clear all</button></div>
-          {list.length === 0 ? <p className="empty">You're all caught up.</p> : list.map((n) => (
+          <div className="drop-head"><b>Notifications</b><button onClick={markSeen}>Mark all read</button></div>
+          {items.length === 0 ? <p className="empty">You're all caught up.</p> : items.map((n) => (
             <div key={n.id} className="note"><span className={`lvl ${n.level}`} /><div><div>{n.text}</div><small>{n.time}</small></div></div>
           ))}
         </div>
@@ -100,7 +84,7 @@ export function ShiftProgress({ value, target }) {
   const pct = target ? (value / target) * 100 : 0;
   return (
     <div className="progress">
-      <div className="progress-top"><small>Good units vs shift target</small><b>{pct.toFixed(0)}%</b></div>
+      <div className="progress-top"><small>Good units vs shift target</small><b>{target ? `${pct.toFixed(0)}%` : "No target set"}</b></div>
       <div className="bar"><i style={{ width: `${Math.min(100, pct)}%` }} className={pct >= 100 ? "done" : ""} /></div>
     </div>
   );
@@ -132,13 +116,6 @@ export function DowntimeTimer({ onStart, onStop }) {
   );
 }
 
-/* ---------- manager: machine floor ---------- */
-export const demoMachines = () =>
-  Array.from({ length: 48 }, (_, i) => {
-    const status = i % 11 === 5 ? "down" : i % 13 === 4 ? "idle" : i % 17 === 9 ? "maint" : "running";
-    return { name: `L${Math.floor(i / 8) + 1}-M${(i % 8) + 1}`, status, oee: status === "running" ? 70 + ((i * 7) % 28) : status === "down" ? 0 : 40 + ((i * 3) % 20), reason: status === "down" ? "Material jam" : status === "maint" ? "Scheduled service" : "" };
-  });
-
 const LABEL = { running: "Running", idle: "Idle", down: "Down", maint: "Maintenance" };
 export function MachineFloor({ machines }) {
   const [filter, setFilter] = useState("all");
@@ -160,34 +137,6 @@ export function MachineFloor({ machines }) {
       </div>
       <div className="floor-detail">
         {pick ? <><b>{pick.name}</b> is {LABEL[pick.status].toLowerCase()}, OEE {pick.oee}%{pick.reason ? `, ${pick.reason}` : ""}.</> : "Select a machine to see details."}
-      </div>
-    </>
-  );
-}
-
-/* ---------- manager: OEE what-if ---------- */
-export function OeeSimulator({ base }) {
-  const init = { a: base.availability, p: base.performance, q: base.quality };
-  const [v, setV] = useState(init);
-  const oee = (v.a * v.p * v.q) / 10000;
-  const baseOee = (init.a * init.p * init.q) / 10000;
-  const diff = oee - baseOee;
-  const Slider = ({ k, label }) => (
-    <label className="slider">
-      <span>{label}<b>{v[k].toFixed(1)}%</b></span>
-      <input type="range" min="50" max="100" step="0.1" value={v[k]} onChange={(e) => setV({ ...v, [k]: Number(e.target.value) })} />
-    </label>
-  );
-  return (
-    <>
-      <div className="sim-result">
-        <div className="big">{oee.toFixed(1)}% <span>OEE</span></div>
-        <span className={`pill ${diff > 0.05 ? "green" : diff < -0.05 ? "red" : "grey"}`}>{diff >= 0 ? "+" : ""}{diff.toFixed(1)} pts vs now</span>
-      </div>
-      <Slider k="a" label="Availability" /><Slider k="p" label="Performance" /><Slider k="q" label="Quality" />
-      <div className="sim-foot">
-        <small>{oee >= 85 ? "Reaches the 85% world-class benchmark." : `${(85 - oee).toFixed(1)} pts below the 85% world-class benchmark.`}</small>
-        <button className="btn blue sm" onClick={() => setV(init)}>Reset</button>
       </div>
     </>
   );

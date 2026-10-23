@@ -28,6 +28,8 @@ class UserResponse(BaseModel):
     full_name: str
     email: EmailStr
     role: Literal["ADMIN", "SUPERVISOR", "MANAGER"]
+    shift_id: int | None = None
+    shift_name: str | None = None
 
 
 class AuthResponse(BaseModel):
