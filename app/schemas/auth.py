@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
-class RegisterRequest(BaseModel):
+class CreateUserRequest(BaseModel):
     full_name: str = Field(min_length=1, max_length=120)
     email: EmailStr
     password: str = Field(min_length=8, max_length=72)
@@ -28,6 +28,8 @@ class UserResponse(BaseModel):
     full_name: str
     email: EmailStr
     role: Literal["ADMIN", "SUPERVISOR", "MANAGER"]
+    shift_id: int | None = None
+    shift_name: str | None = None
 
 
 class AuthResponse(BaseModel):

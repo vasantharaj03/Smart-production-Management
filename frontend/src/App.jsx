@@ -1,12 +1,10 @@
 
 import { useEffect, useState } from "react";
-import { getProfile, login, registerAccount } from "./api/auth";
+import { getProfile, login } from "./api/auth";
 import RoleDashboard from "./RoleDashboard.jsx";
 import "./App.css";
 
 export default function App() {
-  const [mode, setMode] = useState("login");
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -55,21 +53,9 @@ export default function App() {
     e.preventDefault();
     setError("");
 
-    if (mode === "register" && password.length < 8) {
-      setError("Password must contain at least 8 characters.");
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const auth =
-        mode === "register"
-          ? await registerAccount({
-              full_name: fullName.trim(),
-              email: email.trim(),
-              password,
-            })
-          : await login({ email: email.trim(), password });
+      const auth = await login({ email: email.trim(), password });
       localStorage.removeItem("smartprod_access_token");
       sessionStorage.removeItem("smartprod_access_token");
       (remember ? localStorage : sessionStorage).setItem(
@@ -90,7 +76,6 @@ export default function App() {
     sessionStorage.removeItem("smartprod_access_token");
     setUser(null);
     setPassword("");
-    setMode("login");
   }
 
   if (user && !isCheckingSession) {
@@ -236,37 +221,16 @@ export default function App() {
           </div>
 
           <div className="auth-eyebrow">
-            {mode === "login" ? "WELCOME BACK" : "CREATE YOUR ACCOUNT"}
+            WELCOME BACK
           </div>
 
           <h2>
-            {mode === "login" ? "Sign in" : "Get started"}<span>.</span>
+            Sign in<span>.</span>
           </h2>
 
           <p className="auth-description">
-            {mode === "login"
-              ? "Enter your credentials to access your production workspace."
-              : "Create your account to access the production workspace."}
+            Enter your credentials to access your production workspace.
           </p>
-
-          {mode === "register" && (
-            <div className="field">
-              <label htmlFor="full-name">FULL NAME</label>
-              <div className="control">
-                <span className="control-icon">♙</span>
-                <input
-                  id="full-name"
-                  type="text"
-                  placeholder="Your full name"
-                  autoComplete="name"
-                  maxLength={120}
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-          )}
 
           <div className="field">
             <label htmlFor="email">WORK EMAIL</label>
@@ -294,9 +258,7 @@ export default function App() {
             <div className="label-row">
               <label htmlFor="password">PASSWORD</label>
 
-              {mode === "login" && (
-                <span className="password-hint">Minimum 8 characters</span>
-              )}
+              <span className="password-hint">Minimum 8 characters</span>
             </div>
 
             <div className="control">
@@ -306,7 +268,7 @@ export default function App() {
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Minimum 8 characters"
-                autoComplete={mode === "register" ? "new-password" : "current-password"}
+                autoComplete="current-password"
                 minLength={8}
                 value={password}
                 onChange={(e) => {
@@ -346,37 +308,19 @@ export default function App() {
 
           <button type="submit" className="login-button" disabled={isLoading}>
             <span>
-              {isLoading
-                ? "Please wait…"
-                : mode === "login"
-                  ? "Access workspace"
-                  : "Create account"}
+              {isLoading ? "Please wait…" : "Access workspace"}
             </span>
             <span className="button-arrow">↗</span>
           </button>
 
-          <p className="auth-switch">
-            {mode === "login" ? "New to SmartProd?" : "Already have an account?"}{" "}
-            <button
-              className="text-button"
-              type="button"
-              onClick={() => {
-                setMode(mode === "login" ? "register" : "login");
-                setError("");
-              }}
-            >
-              {mode === "login" ? "Create an account" : "Sign in"}
-            </button>
-          </p>
-
           <div className="auth-separator">
             <span />
-            <small>{mode === "login" ? "AUTHORIZED ACCESS ONLY" : "SECURE REGISTRATION"}</small>
+            <small>AUTHORIZED ACCESS ONLY</small>
             <span />
           </div>
 
           <p className="auth-note">
-            Your workspace is protected by role-based access controls.
+            Accounts are provisioned by your SmartProd administrator.
           </p>
         </form>
 

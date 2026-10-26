@@ -25,5 +25,10 @@ class Settings:
     auto_create_tables: bool = as_bool(os.getenv("AUTO_CREATE_TABLES"), True)
     jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "")
     jwt_access_token_minutes: int = int(os.getenv("JWT_ACCESS_TOKEN_MINUTES", "60"))
+    cors_origins: tuple = tuple(
+        origin.strip()
+        for origin in os.getenv("CORS_ORIGINS", "*").split(",")
+        if origin.strip()
+    ) or ("*",)
 
 settings = Settings()

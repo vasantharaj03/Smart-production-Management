@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 
 from app.api.dependencies import get_current_user
 from app.schemas.auth import (
     AuthEnvelope,
     LoginRequest,
-    RegisterRequest,
     UserEnvelope,
     UserResponse,
 )
@@ -13,15 +12,6 @@ from app.utils.responses import success_response
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 service = AuthService()
-
-
-@router.post(
-    "/register",
-    status_code=status.HTTP_201_CREATED,
-    response_model=AuthEnvelope,
-)
-def register(payload: RegisterRequest):
-    return success_response("Account created successfully", service.register(payload))
 
 
 @router.post("/login", response_model=AuthEnvelope)

@@ -1,21 +1,6 @@
 import { useEffect, useState } from "react";
 import { LiveClock, NotificationBell } from "./Extras.jsx";
-
-/* ---------- Logo ---------- */
-const LOGO_URL = "https://www.symtrax.com/wp-content/uploads/2020/08/CavinKare-logo-e1597064886559.png";
-
-export function Logo() {
-  const [failed, setFailed] = useState(false);
-  return (
-    <div className="logo-chip" title="CavinKare">
-      {failed ? (
-        <span className="logo-fallback">Cavin<b>Kare</b></span>
-      ) : (
-        <img src={LOGO_URL} alt="CavinKare" onError={() => setFailed(true)} />
-      )}
-    </div>
-  );
-}
+import { getNotifications } from "../api.js";
 
 /* ---------- Icons (inline SVG, no extra library) ---------- */
 const P = {
@@ -47,25 +32,52 @@ export const Icon = ({ name, size = 18 }) => (
 /* ---------- Theme (light / dark) ---------- */
 function useTheme() {
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
-  useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("theme", theme); }, [theme]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("theme", theme);
+    window.dispatchEvent(new CustomEvent("app-theme-change", { detail: theme }));
+  }, [theme]);
+  useEffect(() => {
+    const syncTheme = (event) => setTheme(event.detail);
+    window.addEventListener("app-theme-change", syncTheme);
+    return () => window.removeEventListener("app-theme-change", syncTheme);
+  }, []);
   return [theme, () => setTheme((t) => (t === "light" ? "dark" : "light"))];
 }
 
 const todayText = () => new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-export function Shell({ user, roleLabel, nav, title, onLogout, onRefresh, extra, notifications, children }) {
-  const [active, setActive] = useState(nav[0]);
+export function Shell({ user, roleLabel, nav, title, onLogout, onRefresh, extra, notifications, children, active: activeProp, onNavigate }) {
+  // Controlled when the page passes `active`; otherwise keeps its own state (old behaviour).
+  const [inner, setInner] = useState(nav[0]);
+  const active = activeProp ?? inner;
+  const setActive = (n) => { setInner(n); onNavigate?.(n); };
   const [stamp, setStamp] = useState(new Date());
   const [spin, setSpin] = useState(false);
-  const [src, setSrc] = useState(window.__dataSource || "demo");
+  const [src, setSrc] = useState(window.__dataSource || "offline");
   const [theme, toggleTheme] = useTheme();
-  const refresh = () => { setStamp(new Date()); setSpin(true); setTimeout(() => setSpin(false), 700); onRefresh?.(); };
+  const [notes, setNotes] = useState([]);
+  const loadNotes = () => getNotifications().then((list) => setNotes((list || []).map((item, index) => ({
+    id: item.id || `${item.text}-${index}`,
+    level: item.level || "medium",
+    text: item.text || "Production update",
+    time: item.time || "",
+  }))));
+  useEffect(() => {
+    loadNotes();
+    const t = setInterval(loadNotes, 10_000);
+    window.addEventListener("appRefresh", loadNotes);
+    return () => { clearInterval(t); window.removeEventListener("appRefresh", loadNotes); };
+  }, []);
+  const notificationItems = [...notes, ...(notifications || [])].filter(
+    (item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index,
+  );
+  const refresh = () => { setStamp(new Date()); setSpin(true); setTimeout(() => setSpin(false), 700); onRefresh?.(); window.dispatchEvent(new Event("appRefresh")); };
   useEffect(() => { const t = setInterval(() => setStamp(new Date()), 60000); return () => clearInterval(t); }, []);
   useEffect(() => { const h = (e) => setSrc(e.detail); window.addEventListener("datasource", h); return () => window.removeEventListener("datasource", h); }, []);
   return (
     <div className="app">
       <aside className="sidebar">
-        <Logo />
         <div className="product"><span className="p-icon"><Icon name="bars" size={20} /></span><div><b>smart<i>prod</i></b><small>INDUSTRIAL INTELLIGENCE</small></div></div>
         <nav>
           {nav.map((n) => (
@@ -86,13 +98,13 @@ export function Shell({ user, roleLabel, nav, title, onLogout, onRefresh, extra,
           <div className="actions">
             {extra}
             <LiveClock />
-            <NotificationBell items={notifications} />
+            <NotificationBell items={notificationItems} />
             <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle dark mode" title="Toggle theme">{theme === "light" ? "☾" : "☀"}</button>
             <button className="btn dark" onClick={refresh}>Refresh<span className={`arrow ${spin ? "spin" : ""}`}>↻</span></button>
           </div>
         </header>
         {children}
-        <footer className="status"><i className="live" /> System Status: <span className="ok">Online</span> | Last Updated: {stamp.toLocaleTimeString()} | Data: <b className={src === "live" ? "ok" : "warn"}>{src === "live" ? "Live" : "Demo"}</b></footer>
+        <footer className="status"><i className="live" /> System Status: <span className="ok">Online</span> | Last Updated: {stamp.toLocaleTimeString()} | Data: <b className={src === "live" ? "ok" : "warn"}>{src === "live" ? "Live" : "Offline"}</b></footer>
       </main>
     </div>
   );

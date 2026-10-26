@@ -7,14 +7,21 @@ class AuthService:
     def __init__(self):
         self.repository = AuthRepository()
 
-    def register(self, payload):
+    def create_user(self, payload):
         user = self.repository.create_user(
             full_name=payload.full_name,
             email=str(payload.email).lower(),
             password_hash=hash_password(payload.password),
             role=payload.role,
         )
-        return self._create_auth_response(user)
+        return {
+            "user_id": user["user_id"],
+            "full_name": user["full_name"],
+            "email": user["email"],
+            "role": user["role"],
+            "shift_id": user.get("shift_id"),
+            "shift_name": user.get("shift_name"),
+        }
 
     def login(self, email: str, password: str):
         user = self.repository.get_by_email(email.lower())
@@ -33,6 +40,8 @@ class AuthService:
             "full_name": user["full_name"],
             "email": user["email"],
             "role": user["role"],
+            "shift_id": user.get("shift_id"),
+            "shift_name": user.get("shift_name"),
         }
         return {
             "access_token": create_access_token(user["user_id"]),

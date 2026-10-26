@@ -1,4 +1,5 @@
 :root{
+  --font-sans:Inter,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --navy:#0a2f2c;--navy2:#0f4a40;--blue:#12806a;--orange:#e9b949;--teal:#3ddc97;--green:#1fa971;--red:#e5484d;
   --bg:#eef8f4;--bg-a:rgba(61,220,151,.24);--bg-b:rgba(18,128,106,.10);
   --card:rgba(255,255,255,.88);--card-solid:#fff;--ink:#0f2a27;--muted:#5c7571;--line:rgba(10,74,58,.11);
@@ -15,10 +16,10 @@
 }
 *{box-sizing:border-box}
 html{color-scheme:light}:root[data-theme="dark"]{color-scheme:dark}
-body{margin:0;font-family:"DM Sans",system-ui,sans-serif;color:var(--ink);background:var(--bg);
+body{margin:0;font-family:var(--font-sans);color:var(--ink);background:var(--bg);
   background-image:radial-gradient(900px 520px at 90% -10%,var(--bg-a),transparent 60%),radial-gradient(800px 500px at 0% 100%,var(--bg-b),transparent 60%);
   background-attachment:fixed;transition:background-color .4s,color .3s}
-h1,h3,h4{font-family:"Plus Jakarta Sans","DM Sans",sans-serif;margin:0;letter-spacing:-.02em}
+h1,h2,h3,h4{font-family:var(--font-sans);margin:0;letter-spacing:-.01em}
 button{font:inherit;cursor:pointer}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .devbar{background:#fff7d6;color:#333;padding:4px 12px;font-size:12px;display:flex;gap:6px;align-items:center}
@@ -35,10 +36,10 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 .sidebar>*{position:relative;z-index:1}
 .logo-chip{background:#fff;border-radius:14px;padding:8px 12px;display:grid;place-items:center;min-height:52px;box-shadow:0 8px 22px rgba(0,0,0,.3)}
 .logo-chip img{max-width:100%;max-height:40px;object-fit:contain;display:block}
-.logo-fallback{font:800 22px "Plus Jakarta Sans";color:#d62828}.logo-fallback b{color:#12306b}
+.logo-fallback{font:700 22px var(--font-sans);color:#d62828}.logo-fallback b{color:#12306b}
 .product{display:flex;gap:10px;align-items:center;padding:16px 4px 16px;color:#fff}
 .p-icon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:var(--teal);background:rgba(61,220,151,.1);border:1px solid rgba(61,220,151,.35)}
-.product b{display:block;font:800 21px/1 "Plus Jakarta Sans";letter-spacing:-.03em}.product b i{font-style:normal;color:var(--teal)}
+.product b{display:block;font:700 21px/1 var(--font-sans);letter-spacing:-.02em}.product b i{font-style:normal;color:var(--teal)}
 .product small{display:block;margin-top:4px;color:var(--teal);font-size:8.5px;font-weight:700;letter-spacing:.2em}
 .sidebar nav{display:flex;flex-direction:column;gap:3px;flex:1;overflow-y:auto}
 .sidebar nav button{position:relative;display:flex;align-items:center;gap:11px;background:none;border:0;color:inherit;text-align:left;padding:11px 13px;border-radius:12px;font-size:14px;transition:background .2s,color .2s,transform .2s}
@@ -98,7 +99,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 .grid>.card:nth-child(1){--n:0}.grid>.card:nth-child(2){--n:1}.grid>.card:nth-child(3){--n:2}.grid>.card:nth-child(4){--n:3}
 
 .kpi{display:flex;gap:12px;align-items:center;margin-bottom:8px}
-.big{font:800 28px/1.1 "Plus Jakarta Sans";letter-spacing:-.03em;font-variant-numeric:tabular-nums}.big span{font-weight:500;font-size:16px;color:var(--muted);letter-spacing:0}
+.big{font:700 28px/1.1 var(--font-sans);letter-spacing:-.02em;font-variant-numeric:tabular-nums}.big span{font-weight:500;font-size:16px;color:var(--muted);letter-spacing:0}
 small{color:var(--muted);font-size:11.5px}.block{display:block}
 .donut{flex-shrink:0;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--glow) 55%,transparent))}
 .donut-arc{transition:stroke-dasharray 1.4s cubic-bezier(.2,.8,.2,1)}

@@ -1,8 +1,6 @@
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
-
 :root {
-  font-family: 'DM Sans', sans-serif;
+  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #172b3d;
   background: #f4f7f5;
   font-synthesis: none;
@@ -104,7 +102,7 @@ button {
 }
 
 .logo-text > span {
-  font-family: 'Manrope', sans-serif;
+  font-family: inherit;
   font-size: 29px;
   font-weight: 800;
   letter-spacing: -1.5px;
@@ -148,7 +146,7 @@ button {
 
 .visual-content h1 {
   margin: 25px 0 20px;
-  font-family: 'Manrope', sans-serif;
+  font-family: inherit;
   font-size: clamp(39px, 4.6vw, 67px);
   line-height: 1.13;
   font-weight: 800;
@@ -351,7 +349,7 @@ button {
 .auth-card h2 {
   margin: 0;
   color: #172c39;
-  font-family: 'Manrope', sans-serif;
+  font-family: inherit;
   font-size: clamp(31px, 3vw, 41px);
   font-weight: 800;
   line-height: 1.2;

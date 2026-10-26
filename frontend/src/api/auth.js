@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+import { API_V1_BASE } from "./config.js";
 const TOKEN_KEY = "smartprod_access_token";
 
 // ---- token helpers (shared by App.jsx and api.js) ----
@@ -20,7 +20,7 @@ const normalizeUser = (user) =>
   user ? { ...user, role: String(user.role || "").toLowerCase() } : user;
 
 async function request(path, { token, ...options } = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_V1_BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -34,14 +34,6 @@ async function request(path, { token, ...options } = {}) {
     throw new Error(result.message || "The request could not be completed.");
   }
   return result.data;
-}
-
-export async function registerAccount({ full_name, email, password }) {
-  const data = await request("/auth/register", {
-    method: "POST",
-    body: JSON.stringify({ full_name, email, password }),
-  });
-  return { ...data, user: normalizeUser(data.user) };
 }
 
 export async function login({ email, password }) {
