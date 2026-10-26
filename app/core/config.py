@@ -21,6 +21,8 @@ class Settings:
     db_user: str = os.getenv("DB_USER", "root")
     db_password: str = os.getenv("DB_PASSWORD", "")
     db_connect_timeout: int = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
+    db_ssl_enabled: bool = as_bool(os.getenv("DB_SSL_ENABLED"), False)
+    db_ssl_ca: str = os.getenv("DB_SSL_CA", "")
     auto_create_database: bool = as_bool(os.getenv("AUTO_CREATE_DATABASE"), True)
     auto_create_tables: bool = as_bool(os.getenv("AUTO_CREATE_TABLES"), True)
     jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "")
