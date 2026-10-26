@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { poll } from "../utils/poll.js";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card } from "../components/Layout.jsx";
 import { latestMachineEvents } from "../data/productionStream.js";
@@ -80,8 +81,7 @@ export function ResourcePlanning({ toast, dailyProduction = {} }) {
   const [np, setNp] = useState({ product_code: "", product_name: "" });
 
   useEffect(() => {
-    const timer = window.setInterval(() => setTargetRefresh((value) => value + 1), 10_000);
-    return () => window.clearInterval(timer);
+    return poll(() => setTargetRefresh((value) => value + 1), 30_000);
   }, []);
 
   const activeProducts = (products || []).filter((p) => p.is_active);
@@ -170,8 +170,7 @@ export function ManagerSupervisorManagement({ toast }) {
   );
 
   useEffect(() => {
-    const timer = window.setInterval(() => setSupervisorRefresh((value) => value + 1), 30_000);
-    return () => window.clearInterval(timer);
+    return poll(() => setSupervisorRefresh((value) => value + 1), 60_000);
   }, []);
 
   const saveAssignment = async (supervisor) => {

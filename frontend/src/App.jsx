@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { getProfile, login } from "./api/auth";
+import { getProfile, login, warmUpServer } from "./api/auth";
 import RoleDashboard from "./RoleDashboard.jsx";
 import "./App.css";
 
@@ -12,6 +12,17 @@ export default function App() {
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSlow, setIsSlow] = useState(false);
+
+  // Wake the backend while the user is still typing their credentials.
+  useEffect(() => { warmUpServer(); }, []);
+
+  // If login takes more than 4s the server is probably waking up: say so.
+  useEffect(() => {
+    if (!isLoading) { setIsSlow(false); return undefined; }
+    const t = setTimeout(() => setIsSlow(true), 4000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
   const [isCheckingSession, setIsCheckingSession] = useState(() =>
     Boolean(
       localStorage.getItem("smartprod_access_token") ||
@@ -308,7 +319,7 @@ export default function App() {
 
           <button type="submit" className="login-button" disabled={isLoading}>
             <span>
-              {isLoading ? "Please wait…" : "Access workspace"}
+              {isLoading ? (isSlow ? "Waking up the server… (can take ~30s)" : "Please wait…") : "Access workspace"}
             </span>
             <span className="button-arrow">↗</span>
           </button>

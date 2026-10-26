@@ -1,7 +1,10 @@
 """All dashboard logic: reads for the 3 dashboards, writes for the supervisor forms, audit log."""
 import csv
+import functools
 import io
 import re
+import threading
+import time
 from datetime import date, datetime, time as dtime, timedelta
 from xml.sax.saxutils import escape
 
@@ -17,6 +20,37 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from app.core.database import get_cursor
 from app.errors.exceptions import Conflict, InvalidRequest, NotFound
+
+# Tiny TTL cache for expensive, read-only dashboard queries. Several users and
+# the 10-30s browser polling all ask for the same data; compute it once.
+_TTL_CACHE = {}
+_TTL_LOCK = threading.Lock()
+
+
+def ttl_cached(seconds):
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            key = (fn.__name__, args, tuple(sorted(kwargs.items())))
+            now = time.monotonic()
+            with _TTL_LOCK:
+                hit = _TTL_CACHE.get(key)
+                if hit and now - hit[0] < seconds:
+                    return hit[1]
+            value = fn(*args, **kwargs)
+            with _TTL_LOCK:
+                _TTL_CACHE[key] = (time.monotonic(), value)
+                if len(_TTL_CACHE) > 200:      # keep it bounded
+                    _TTL_CACHE.clear()
+            return value
+        return wrapper
+    return decorator
+
+
+def clear_dashboard_cache():
+    with _TTL_LOCK:
+        _TTL_CACHE.clear()
+
 
 DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 DATA_ENTRY_ACTIONS = {"Shift Entry", "Downtime Logged", "Downtime Ended"}
@@ -180,14 +214,22 @@ EXTRA_TABLES = [
 _schema_ready = False
 
 
+_default_shifts_ready = False
+
+
 def ensure_default_shifts():
-    """Ensure A/B/C shifts exist without overwriting existing shift definitions."""
+    """Ensure A/B/C shifts exist without overwriting existing shift definitions.
+    Runs once per process; it used to run on every supervisor dashboard load."""
+    global _default_shifts_ready
+    if _default_shifts_ready:
+        return
     with get_cursor() as (_, cur):
         for name, st, en in DEFAULT_SHIFTS:
             cur.execute(
                 "INSERT IGNORE INTO shifts (shift_name, start_time, end_time) VALUES (%s,%s,%s)",
                 (name, st, en),
             )
+    _default_shifts_ready = True
 
 
 def ensure_schema():
@@ -392,6 +434,7 @@ def _per_machine(start, end):
     return out
 
 
+@ttl_cached(10)
 def compute_alerts(start, end):
     now = datetime.now()
     alerts = []
@@ -684,6 +727,7 @@ def _oee(produced, defective, run, planned, target):
             "quality": round(quality, 1), "value": round(availability * performance * quality / 10000, 1)}
 
 
+@ttl_cached(10)
 def manager_dashboard(range_name="daily"):
     start, end, p_start, p_end = period(range_name)
     now = datetime.now()

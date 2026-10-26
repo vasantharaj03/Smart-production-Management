@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { poll } from "../utils/poll.js";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Shell, Card, Donut, Pill, CountUp, Loading } from "../components/Layout.jsx";
 import { getAdminData, pingApi } from "../api.js";
@@ -25,8 +26,8 @@ function useLatency() {
     let live = true;
     const tick = () => pingApi().then((ms) => live && setS((a) => [...a.slice(-23), ms])).catch(() => {});
     tick();
-    const t = setInterval(tick, 5000);
-    return () => { live = false; clearInterval(t); };
+    const stopPolling = poll(tick, 15_000);
+    return () => { live = false; stopPolling(); };
   }, []);
   return s;
 }
@@ -53,7 +54,7 @@ export default function AdminDashboard({ user, onLogout }) {
   }));
   const latency = useLatency();
   const load = () => getAdminData(range).then(setD);
-  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [range]); // auto-refresh every 15s
+  useEffect(() => { load(); return poll(load, 30_000); }, [range]); // auto-refresh every 30s (skips hidden tab / in-flight)
   if (!d) return <Loading />;
   const k = d.kpis;
   const logs = d.audit.filter((a) => Object.values(a).join(" ").toLowerCase().includes(q.toLowerCase()));

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { poll } from "../utils/poll.js";
 import { BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Shell, Card, Donut, CountUp, Loading } from "../components/Layout.jsx";
 import { getManagerData, downloadReport } from "../api.js";
@@ -34,7 +35,7 @@ export default function ManagerDashboard({ user, onLogout }) {
   const toast = useToast();
   const stream = useProductionStream();
   const load = () => getManagerData(range).then(setD);
-  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [range]); // auto-refresh every 15s
+  useEffect(() => { load(); return poll(load, 30_000); }, [range]); // auto-refresh every 30s (skips hidden tab / in-flight)
   if (!d) return <Loading />;
 
   const summary = summarizeProductionEvents(stream.events);

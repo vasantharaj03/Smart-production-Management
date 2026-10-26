@@ -15,6 +15,13 @@ export function clearToken() {
   sessionStorage.removeItem(TOKEN_KEY);
 }
 
+// Render's free tier sleeps when idle; the first request can take 30-60s to wake it.
+// Fire a cheap, DB-free request as soon as the app opens so the server is already
+// awake by the time the user has typed their password.
+export function warmUpServer() {
+  fetch(`${API_V1_BASE}/health`, { cache: "no-store" }).catch(() => {});
+}
+
 // ---- make sure role is always lowercase, e.g. "Admin" -> "admin" ----
 const normalizeUser = (user) =>
   user ? { ...user, role: String(user.role || "").toLowerCase() } : user;

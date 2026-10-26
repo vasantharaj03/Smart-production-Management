@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { poll } from "../utils/poll.js";
 import { PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer } from "recharts";
 import { getProductProduction, getTargets } from "../api.js";
 import { achievementPercent, productProductionSummary, shiftCode, targetAppliesToShift, targetCompleted, targetProduction } from "../data/targetProduction.js";
@@ -154,12 +155,12 @@ export function ShiftTargetProgress({ dailyProduction, currentShiftOnly = false,
 
     load();
     loadProducts();
-    const timer = window.setInterval(load, 10_000);
-    const productTimer = window.setInterval(loadProducts, 10_000);
+    const stopTargets = poll(load, 30_000);
+    const stopProducts = poll(loadProducts, 30_000);
     return () => {
       active = false;
-      window.clearInterval(timer);
-      window.clearInterval(productTimer);
+      stopTargets();
+      stopProducts();
     };
   }, [date, currentShiftOnly, shift]);
 

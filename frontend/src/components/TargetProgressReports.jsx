@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { poll } from "../utils/poll.js";
 import {
   getManagerTargetReports,
   getTargetReportManagers,
@@ -24,18 +25,16 @@ export function SupervisorTargetProgressReport({ dailyProduction, toast }) {
 
   useEffect(() => {
     let active = true;
-    const load = () => {
-      Promise.all([getTargets(today()), getTargetReportManagers()]).then(([targetList, managerList]) => {
-        if (!active) return;
-        setTargets(targetList || []);
-        setManagers(managerList || []);
-      });
-    };
+    const load = () => Promise.all([getTargets(today()), getTargetReportManagers()]).then(([targetList, managerList]) => {
+      if (!active) return;
+      setTargets(targetList || []);
+      setManagers(managerList || []);
+    });
     load();
-    const timer = window.setInterval(load, 30_000);
+    const stopPolling = poll(load, 30_000);
     return () => {
       active = false;
-      window.clearInterval(timer);
+      stopPolling();
     };
   }, []);
 
@@ -138,10 +137,10 @@ export function ManagerTargetProgressReports({ toast }) {
       if (active) setReports(result || []);
     });
     load();
-    const timer = window.setInterval(load, 30_000);
+    const stopPolling = poll(load, 30_000);
     return () => {
       active = false;
-      window.clearInterval(timer);
+      stopPolling();
     };
   }, []);
 

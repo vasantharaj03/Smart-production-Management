@@ -13,7 +13,7 @@ from fastapi import (
 )
 from fastapi.security import HTTPAuthorizationCredentials
 
-from app.api.dependencies import get_current_user, require_roles
+from app.api.dependencies import get_current_user, invalidate_user_cache, require_roles
 from app.dashboard import service
 from app.dashboard.synthetic_stream import synthetic_stream
 from app.errors.exceptions import AppError
@@ -24,6 +24,14 @@ from app.utils.responses import success_response
 router = APIRouter(tags=["Dashboards"], dependencies=[Depends(service.ensure_schema)])
 logger = logging.getLogger(__name__)
 auth_service = AuthService()
+
+def _written(result, users_changed=False):
+    """Call after any write so cached dashboard data / cached users are refreshed."""
+    service.clear_dashboard_cache()
+    if users_changed:
+        invalidate_user_cache()
+    return result
+
 
 ANY = require_roles("ADMIN", "MANAGER", "SUPERVISOR")
 MANAGER = require_roles("ADMIN", "MANAGER")
@@ -70,22 +78,22 @@ def supervisor_dashboard(user=Depends(ANY)):
 
 @router.post("/production/shift-entry", status_code=status.HTTP_201_CREATED)
 def shift_entry(body: dict = Body(...), user=Depends(ANY)):
-    return success_response("Shift entry saved", service.submit_shift_entry(body, user))
+    return success_response("Shift entry saved", _written(service.submit_shift_entry(body, user)))
 
 
 @router.post("/downtime", status_code=status.HTTP_201_CREATED)
 def downtime(body: dict = Body(...), user=Depends(ANY)):
-    return success_response("Downtime logged", service.log_downtime(body, user))
+    return success_response("Downtime logged", _written(service.log_downtime(body, user)))
 
 
 @router.patch("/downtime/{downtime_id}/end")
 def downtime_end(downtime_id: int, user=Depends(ANY)):
-    return success_response("Downtime ended", service.end_downtime(downtime_id, user))
+    return success_response("Downtime ended", _written(service.end_downtime(downtime_id, user)))
 
 
 @router.patch("/machines/{machine_id}/status")
 def machine_status(machine_id: int, body: dict = Body(...), user=Depends(ANY)):
-    return success_response("Machine status updated", service.set_machine_status(machine_id, body.get("status"), user))
+    return success_response("Machine status updated", _written(service.set_machine_status(machine_id, body.get("status"), user)))
 
 
 @router.get("/quality/summary")
@@ -123,7 +131,7 @@ def assign_manager_supervisor_shift(
 ):
     return success_response(
         "Supervisor shift assignment updated",
-        service.assign_supervisor_shift(user_id, body, user),
+        _written(service.assign_supervisor_shift(user_id, body, user), users_changed=True),
     )
 
 
@@ -135,7 +143,7 @@ def unassign_manager_supervisor_shift(
 ):
     return success_response(
         "Supervisor shift unassigned",
-        service.unassign_supervisor_shift(user_id, body, user),
+        _written(service.unassign_supervisor_shift(user_id, body, user), users_changed=True),
     )
 
 
@@ -158,7 +166,7 @@ def target_report_managers(user=Depends(SUPERVISOR_ONLY)):
 def create_target_report(body: dict = Body(...), user=Depends(SUPERVISOR_ONLY)):
     return success_response(
         "Target progress report sent",
-        service.create_target_progress_report(body, user),
+        _written(service.create_target_progress_report(body, user)),
     )
 
 
@@ -174,7 +182,7 @@ def manager_target_reports(user=Depends(MANAGER)):
 def review_manager_target_report(report_id: int, user=Depends(MANAGER)):
     return success_response(
         "Target progress report reviewed",
-        service.review_target_progress_report(report_id, user),
+        _written(service.review_target_progress_report(report_id, user)),
     )
 
 
@@ -192,7 +200,7 @@ def product_production(
 
 @router.post("/targets", status_code=status.HTTP_201_CREATED)
 def add_target(body: dict = Body(...), user=Depends(MANAGER_ONLY)):
-    return success_response("Target saved", service.create_target(body, user))
+    return success_response("Target saved", _written(service.create_target(body, user)))
 
 
 @router.get("/reports")
@@ -226,7 +234,7 @@ def users(user=Depends(ADMIN)):
 
 @router.post("/admin/users", status_code=status.HTTP_201_CREATED, response_model=UserEnvelope)
 def add_user(payload: CreateUserRequest, user=Depends(ADMIN)):
-    created_user = auth_service.create_user(payload)
+    created_user = _written(auth_service.create_user(payload), users_changed=True)
     service.log_audit(
         user,
         "Created User",
@@ -238,17 +246,17 @@ def add_user(payload: CreateUserRequest, user=Depends(ADMIN)):
 
 @router.patch("/admin/users/{user_id}")
 def patch_user(user_id: int, body: dict = Body(...), user=Depends(ADMIN)):
-    return success_response("User updated", service.update_user(user_id, body, user))
+    return success_response("User updated", _written(service.update_user(user_id, body, user), users_changed=True))
 
 
 @router.post("/shifts", status_code=status.HTTP_201_CREATED)
 def add_shift(body: dict = Body(...), user=Depends(ADMIN)):
-    return success_response("Shift created", service.create_shift(body, user))
+    return success_response("Shift created", _written(service.create_shift(body, user)))
 
 
 @router.patch("/shifts/{shift_id}")
 def patch_shift(shift_id: int, body: dict = Body(...), user=Depends(ADMIN)):
-    return success_response("Shift updated", service.update_shift(shift_id, body, user))
+    return success_response("Shift updated", _written(service.update_shift(shift_id, body, user)))
 
 
 # ---- shared lists ----
@@ -259,12 +267,12 @@ def products(user=Depends(ANY)):
 
 @router.post("/products", status_code=status.HTTP_201_CREATED)
 def add_product(body: dict = Body(...), user=Depends(MANAGER)):
-    return success_response("Product created", service.create_product(body, user))
+    return success_response("Product created", _written(service.create_product(body, user)))
 
 
 @router.patch("/products/{product_id}")
 def patch_product(product_id: int, body: dict = Body(...), user=Depends(MANAGER)):
-    return success_response("Product updated", service.update_product(product_id, body, user))
+    return success_response("Product updated", _written(service.update_product(product_id, body, user)))
 
 
 @router.get("/shifts")

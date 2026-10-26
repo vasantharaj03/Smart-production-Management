@@ -180,6 +180,9 @@ Create request:
 # to start backend Server
  py -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 
+ # to seed the data
+ python scripts/seed_demo.py
+
  # start the live streaming
  python -m app.dashboard.synthetic_stream
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { poll } from "../utils/poll.js";
 import { LiveClock, NotificationBell } from "./Extras.jsx";
 import { getNotifications } from "../api.js";
 
@@ -65,9 +66,9 @@ export function Shell({ user, roleLabel, nav, title, onLogout, onRefresh, extra,
   }))));
   useEffect(() => {
     loadNotes();
-    const t = setInterval(loadNotes, 10_000);
+    const stopPolling = poll(loadNotes, 60_000);
     window.addEventListener("appRefresh", loadNotes);
-    return () => { clearInterval(t); window.removeEventListener("appRefresh", loadNotes); };
+    return () => { stopPolling(); window.removeEventListener("appRefresh", loadNotes); };
   }, []);
   const notificationItems = [...notes, ...(notifications || [])].filter(
     (item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index,
