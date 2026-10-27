@@ -149,7 +149,7 @@ export default function AdminDashboard({ user, onLogout }) {
   }[section];
 
   return (
-    <Shell user={user} roleLabel="Admin" onLogout={onLogout} onRefresh={load}
+    <Shell user={user} roleLabel="Admin" onLogout={onLogout}
       nav={NAV} active={section} onNavigate={setSection} title={TITLES[section]}
       notifications={streamNotifications}
       extra={section === "Dashboard" && <select className="select" value={range} onChange={(e) => setRange(e.target.value)}><option value="today">Today</option><option value="week">This week</option><option value="month">This month</option></select>}>

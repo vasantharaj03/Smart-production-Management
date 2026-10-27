@@ -27,11 +27,6 @@ export function useToast() {
 export function useLoad(fn, deps = []) {
   const [data, setData] = useState(null);
   const [tick, setTick] = useState(0);
-  useEffect(() => {   // the top-bar Refresh button reloads every section too
-    const h = () => setTick((n) => n + 1);
-    window.addEventListener("appRefresh", h);
-    return () => window.removeEventListener("appRefresh", h);
-  }, []);
   useEffect(() => {
     let live = true;
     fn().then((d) => live && setData(d));

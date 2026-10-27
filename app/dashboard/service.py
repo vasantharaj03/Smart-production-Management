@@ -27,11 +27,25 @@ _TTL_CACHE = {}
 _TTL_LOCK = threading.Lock()
 
 
+def _freeze_cache_value(value):
+    if isinstance(value, dict):
+        return tuple(sorted((key, _freeze_cache_value(item)) for key, item in value.items()))
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_cache_value(item) for item in value)
+    if isinstance(value, set):
+        return tuple(sorted(_freeze_cache_value(item) for item in value))
+    return value
+
+
 def ttl_cached(seconds):
     def decorator(fn):
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
-            key = (fn.__name__, args, tuple(sorted(kwargs.items())))
+            key = (
+                fn.__name__,
+                _freeze_cache_value(args),
+                _freeze_cache_value(kwargs),
+            )
             now = time.monotonic()
             with _TTL_LOCK:
                 hit = _TTL_CACHE.get(key)
@@ -253,6 +267,7 @@ def ensure_schema():
     _schema_ready = True
 
 
+@ttl_cached(30)
 def supervisor_dashboard(user=None):
     ensure_default_shifts()
     today = date.today()
@@ -727,7 +742,7 @@ def _oee(produced, defective, run, planned, target):
             "quality": round(quality, 1), "value": round(availability * performance * quality / 10000, 1)}
 
 
-@ttl_cached(10)
+@ttl_cached(30)
 def manager_dashboard(range_name="daily"):
     start, end, p_start, p_end = period(range_name)
     now = datetime.now()
@@ -931,15 +946,64 @@ def unassign_supervisor_shift(user_id, body, manager):
     return updated
 
 
+@ttl_cached(30)
 def admin_dashboard(range_name="today"):
-    u = one("""SELECT COALESCE(SUM(is_active),0) AS active, COALESCE(SUM(role='SUPERVISOR'),0) AS operators,
-                      COALESCE(SUM(role='MANAGER'),0) AS managers, COALESCE(SUM(role='ADMIN'),0) AS admins,
-                      COALESCE(SUM(created_at >= %s),0) AS new FROM users""", (datetime.now() - timedelta(days=7),))
-    p = one("""SELECT COUNT(*) AS total, COALESCE(SUM(is_active),0) AS active,
-                      COALESCE(SUM(updated_at >= %s),0) AS today FROM products""", (datetime.combine(date.today(), dtime.min),))
-    m = one("""SELECT COUNT(*) AS total, COALESCE(SUM(status='RUNNING'),0) AS running, COALESCE(SUM(status='MAINTENANCE'),0) AS maint,
-                      COALESCE(SUM(status='IDLE'),0) AS idle, COALESCE(SUM(status='DOWN'),0) AS down FROM machines""")
-    s = one("SELECT COUNT(*) AS total, COALESCE(SUM(is_active),0) AS active FROM shifts")
+    snapshot = one(
+        """SELECT
+             u.active AS users_active, u.operators, u.managers, u.admins, u.new_users,
+             p.total AS products_total, p.active AS products_active, p.updated_today AS products_updated_today,
+             m.total AS machines_total, m.running AS machines_running,
+             m.maintenance AS machines_maintenance, m.idle AS machines_idle, m.down AS machines_down,
+             s.total AS shifts_total, s.active AS shifts_active
+           FROM (
+             SELECT COALESCE(SUM(is_active),0) AS active,
+                    COALESCE(SUM(role='SUPERVISOR'),0) AS operators,
+                    COALESCE(SUM(role='MANAGER'),0) AS managers,
+                    COALESCE(SUM(role='ADMIN'),0) AS admins,
+                    COALESCE(SUM(created_at >= %s),0) AS new_users
+             FROM users
+           ) u
+           CROSS JOIN (
+             SELECT COUNT(*) AS total, COALESCE(SUM(is_active),0) AS active,
+                    COALESCE(SUM(updated_at >= %s),0) AS updated_today
+             FROM products
+           ) p
+           CROSS JOIN (
+             SELECT COUNT(*) AS total, COALESCE(SUM(status='RUNNING'),0) AS running,
+                    COALESCE(SUM(status='MAINTENANCE'),0) AS maintenance,
+                    COALESCE(SUM(status='IDLE'),0) AS idle,
+                    COALESCE(SUM(status='DOWN'),0) AS down
+             FROM machines
+           ) m
+           CROSS JOIN (
+             SELECT COUNT(*) AS total, COALESCE(SUM(is_active),0) AS active
+             FROM shifts
+           ) s""",
+        (
+            datetime.now() - timedelta(days=7),
+            datetime.combine(date.today(), dtime.min),
+        ),
+    )
+    u = {
+        "active": snapshot["users_active"],
+        "operators": snapshot["operators"],
+        "managers": snapshot["managers"],
+        "admins": snapshot["admins"],
+        "new": snapshot["new_users"],
+    }
+    p = {
+        "total": snapshot["products_total"],
+        "active": snapshot["products_active"],
+        "today": snapshot["products_updated_today"],
+    }
+    m = {
+        "total": snapshot["machines_total"],
+        "running": snapshot["machines_running"],
+        "maint": snapshot["machines_maintenance"],
+        "idle": snapshot["machines_idle"],
+        "down": snapshot["machines_down"],
+    }
+    s = {"total": snapshot["shifts_total"], "active": snapshot["shifts_active"]}
     total_cfg = int(p["total"]) + int(m["total"]) + int(s["total"])
     active_cfg = int(p["active"]) + int(m["total"] - m["down"]) + int(s["active"])
     last = one("SELECT MAX(created_at) AS t FROM audit_logs WHERE action NOT IN ('Login','Shift Entry','Downtime Logged','Downtime Ended')")
@@ -970,16 +1034,23 @@ def admin_dashboard(range_name="today"):
     activity = [{"day": DAY_NAMES[d.weekday()], **v} for d, v in buckets.items()]
 
     start, end, _, _ = period(range_name)
-    recs = one("SELECT COUNT(*) AS n, COALESCE(SUM(shift_id IS NOT NULL),0) AS with_shift FROM production_records WHERE production_date BETWEEN %s AND %s", (start, end))
-    prod_used = one("SELECT COUNT(DISTINCT product_id) AS n FROM production_records WHERE production_date BETWEEN %s AND %s", (start, end))
-    mach_used = one("SELECT COUNT(DISTINCT machine_id) AS n FROM production_records WHERE production_date BETWEEN %s AND %s", (start, end))
+    reconciliation_counts = one(
+        """SELECT
+             COUNT(*) AS records_total,
+             COALESCE(SUM(shift_id IS NOT NULL),0) AS records_with_shift,
+             COUNT(DISTINCT product_id) AS products_used,
+             COUNT(DISTINCT machine_id) AS machines_used
+           FROM production_records
+           WHERE production_date BETWEEN %s AND %s""",
+        (start, end),
+    )
     reconciliation = [
-        {"list": "Products", "total": int(p["active"]), "pct": pct(prod_used["n"], p["active"]),
-         "unreconciled": int(p["active"]) - int(prod_used["n"])},
-        {"list": "Machines", "total": int(m["total"]), "pct": pct(mach_used["n"], m["total"]),
-         "unreconciled": int(m["total"]) - int(mach_used["n"])},
-        {"list": "Shifts", "total": int(recs["n"]), "pct": pct(recs["with_shift"], recs["n"]),
-         "unreconciled": int(recs["n"]) - int(recs["with_shift"])},
+        {"list": "Products", "total": int(p["active"]), "pct": pct(reconciliation_counts["products_used"], p["active"]),
+         "unreconciled": int(p["active"]) - int(reconciliation_counts["products_used"])},
+        {"list": "Machines", "total": int(m["total"]), "pct": pct(reconciliation_counts["machines_used"], m["total"]),
+         "unreconciled": int(m["total"]) - int(reconciliation_counts["machines_used"])},
+        {"list": "Shifts", "total": int(reconciliation_counts["records_total"]), "pct": pct(reconciliation_counts["records_with_shift"], reconciliation_counts["records_total"]),
+         "unreconciled": int(reconciliation_counts["records_total"]) - int(reconciliation_counts["records_with_shift"])},
     ]
     audit = [{"time": a["created_at"].strftime("%I:%M:%S %p"), "user": a["user_name"], "action": a["action"],
               "target": a["target"], "details": a["details"]}

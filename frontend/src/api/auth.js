@@ -1,5 +1,8 @@
 import { API_V1_BASE } from "./config.js";
 const TOKEN_KEY = "smartprod_access_token";
+const WARMUP_CACHE_MS = 60_000;
+let warmupPromise = null;
+let lastWarmupAt = 0;
 
 // ---- token helpers (shared by App.jsx and api.js) ----
 export const getToken = () =>
@@ -15,11 +18,27 @@ export function clearToken() {
   sessionStorage.removeItem(TOKEN_KEY);
 }
 
-// Render's free tier sleeps when idle; the first request can take 30-60s to wake it.
-// Fire a cheap, DB-free request as soon as the app opens so the server is already
-// awake by the time the user has typed their password.
+// Wake Render while the user is entering credentials, then share that request
+// with login/profile calls instead of sending them while the instance is starting.
 export function warmUpServer() {
-  fetch(`${API_V1_BASE}/health`, { cache: "no-store" }).catch(() => {});
+  if (warmupPromise) return warmupPromise;
+  if (Date.now() - lastWarmupAt < WARMUP_CACHE_MS) return Promise.resolve();
+
+  warmupPromise = fetch(`${API_V1_BASE}/health`, { cache: "no-store" })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Backend health check failed (HTTP ${response.status}).`);
+      }
+      lastWarmupAt = Date.now();
+    })
+    .catch((error) => {
+      throw new Error(`Could not connect to the backend: ${error.message}`);
+    })
+    .finally(() => {
+      warmupPromise = null;
+    });
+
+  return warmupPromise;
 }
 
 // ---- make sure role is always lowercase, e.g. "Admin" -> "admin" ----

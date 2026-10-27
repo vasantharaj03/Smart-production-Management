@@ -15,7 +15,7 @@ export default function App() {
   const [isSlow, setIsSlow] = useState(false);
 
   // Wake the backend while the user is still typing their credentials.
-  useEffect(() => { warmUpServer(); }, []);
+  useEffect(() => { warmUpServer().catch(() => {}); }, []);
 
   // If login takes more than 4s the server is probably waking up: say so.
   useEffect(() => {
@@ -42,14 +42,13 @@ export default function App() {
       };
     }
 
-    getProfile(token)
+    warmUpServer()
+      .then(() => getProfile(token))
       .then((profile) => {
         if (active) setUser(profile);
       })
-      .catch(() => {
-        localStorage.removeItem("smartprod_access_token");
-        sessionStorage.removeItem("smartprod_access_token");
-        if (active) setError("Your session has expired. Please sign in again.");
+      .catch((requestError) => {
+        if (active) setError(requestError.message);
       })
       .finally(() => {
         if (active) setIsCheckingSession(false);
@@ -66,6 +65,7 @@ export default function App() {
 
     setIsLoading(true);
     try {
+      await warmUpServer();
       const auth = await login({ email: email.trim(), password });
       localStorage.removeItem("smartprod_access_token");
       sessionStorage.removeItem("smartprod_access_token");

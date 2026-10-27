@@ -48,13 +48,12 @@ function useTheme() {
 
 const todayText = () => new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-export function Shell({ user, roleLabel, nav, title, onLogout, onRefresh, extra, notifications, children, active: activeProp, onNavigate }) {
+export function Shell({ user, roleLabel, nav, title, onLogout, extra, notifications, children, active: activeProp, onNavigate }) {
   // Controlled when the page passes `active`; otherwise keeps its own state (old behaviour).
   const [inner, setInner] = useState(nav[0]);
   const active = activeProp ?? inner;
   const setActive = (n) => { setInner(n); onNavigate?.(n); };
   const [stamp, setStamp] = useState(new Date());
-  const [spin, setSpin] = useState(false);
   const [src, setSrc] = useState(window.__dataSource || "offline");
   const [theme, toggleTheme] = useTheme();
   const [notes, setNotes] = useState([]);
@@ -67,13 +66,12 @@ export function Shell({ user, roleLabel, nav, title, onLogout, onRefresh, extra,
   useEffect(() => {
     loadNotes();
     const stopPolling = poll(loadNotes, 60_000);
-    window.addEventListener("appRefresh", loadNotes);
-    return () => { stopPolling(); window.removeEventListener("appRefresh", loadNotes); };
+    return () => stopPolling();
   }, []);
   const notificationItems = [...notes, ...(notifications || [])].filter(
     (item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index,
   );
-  const refresh = () => { setStamp(new Date()); setSpin(true); setTimeout(() => setSpin(false), 700); onRefresh?.(); window.dispatchEvent(new Event("appRefresh")); };
+  const refresh = () => window.location.reload();
   useEffect(() => { const t = setInterval(() => setStamp(new Date()), 60000); return () => clearInterval(t); }, []);
   useEffect(() => { const h = (e) => setSrc(e.detail); window.addEventListener("datasource", h); return () => window.removeEventListener("datasource", h); }, []);
   return (
@@ -101,7 +99,7 @@ export function Shell({ user, roleLabel, nav, title, onLogout, onRefresh, extra,
             <LiveClock />
             <NotificationBell items={notificationItems} />
             <button className="icon-btn" onClick={toggleTheme} aria-label="Toggle dark mode" title="Toggle theme">{theme === "light" ? "☾" : "☀"}</button>
-            <button className="btn dark" onClick={refresh}>Refresh<span className={`arrow ${spin ? "spin" : ""}`}>↻</span></button>
+            <button className="btn dark" onClick={refresh}>Refresh<span className="arrow">↻</span></button>
           </div>
         </header>
         {children}

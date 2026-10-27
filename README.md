@@ -212,3 +212,23 @@ The production stream uses the same API origin over WebSockets. If using a
 custom stream host, set `VITE_PRODUCTION_STREAM_URL` in Vercel to its public
 `wss://` URL. Vite variables are embedded during the frontend build, so redeploy
 the frontend after changing them.
+
+### Production response time
+
+The frontend sends a lightweight health request as soon as the sign-in page
+opens, and login waits for that request to finish. This avoids starting login
+while a sleeping API instance is waking up, but it cannot remove the cold-start
+delay itself. If the Render service is on a free instance that spins down while
+idle, the first visit after inactivity can still take around 30 seconds; use an
+always-on Render instance to remove that delay.
+
+For faster dashboard queries, choose the same or a nearby region for the Render
+API and Aiven database. Confirm that Render's `DB_HOST`, `DB_PORTS`,
+`DB_NAME`, `DB_USER`, and `DB_PASSWORD` point to Aiven's **service hostname and
+MySQL port**, and enable Aiven's required TLS settings (`DB_SSL_ENABLED=true`
+and its CA certificate if configured). After changing Vercel environment
+variables, redeploy the frontend; after changing Render variables, redeploy the
+API. Browser Network timings for the Render API requests and Render/Aiven
+service regions can help distinguish cold starts from slow database queries.
+Dashboard API responses are cached briefly in the Render process to avoid
+repeating expensive reads; application writes invalidate that cache.

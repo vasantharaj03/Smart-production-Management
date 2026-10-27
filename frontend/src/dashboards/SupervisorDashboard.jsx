@@ -29,10 +29,8 @@ export default function SupervisorDashboard({ user, onLogout }) {
     const loadAssignment = () => getSupervisorData().then(setDashboardData);
     loadAssignment();
     const timer = window.setInterval(loadAssignment, 30_000);
-    window.addEventListener("appRefresh", loadAssignment);
     return () => {
       window.clearInterval(timer);
-      window.removeEventListener("appRefresh", loadAssignment);
     };
   }, []);
   const streamNotifications = summarizeMachineAlerts(stream.events).map((alert) => ({

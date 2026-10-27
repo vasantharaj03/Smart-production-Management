@@ -269,7 +269,7 @@ export default function ManagerDashboard({ user, onLogout }) {
   }[section];
 
   return (
-    <Shell user={user} roleLabel="Production Manager" onLogout={onLogout} onRefresh={load}
+    <Shell user={user} roleLabel="Production Manager" onLogout={onLogout}
       nav={NAV} active={section} onNavigate={setSection} title={TITLES[section]}
       notifications={alerts.map((alert) => ({
         id: `stream:${alert.id}`,
